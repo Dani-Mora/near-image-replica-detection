@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Near-image-replica-detection by DaniUPC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Near-image-replica-detection</h1>
+      <h2 class="project-tagline">Distributed near replica detector using Spark.</h2>
+      <a href="https://github.com/DaniUPC/near-image-replica-detection" class="btn">View on GitHub</a>
+      <a href="https://github.com/DaniUPC/near-image-replica-detection/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/DaniUPC/near-image-replica-detection/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h2>
+<a id="welcome" class="anchor" href="#welcome" aria-hidden="true"><span class="octicon octicon-link"></span></a>Welcome</h2>
+
+<p>This is a near replica detection framework mainly inspired by the work presented by Dong et al in "High-Confidence Near-Duplicate Image Detection". This work was done for the final thesis of the integrated Master in Computer Science at Universitat Politècnica de Catalunya.</p>
+
+<p>The purpose of this framework is to detected replicas (such as memes, resized replicas, collages, etc) of images in a distributed, efficient and real-time way. It is based on the computational framework Apache Spark and the distributed key-value database HBase. It contains several use cases for both batch and streaming scenarios allowing to compute on both disk and memory.</p>
+
+<p>Though it is intented to be installed in a Spark cluster it can also be tested on a local Linux environment. First, download <a href="https://spark.apache.org/downloads.html">Spark</a> and <a href="https://www.apache.org/dist/hbase/0.98.12.1/">HBase</a>. Versions used during the development were 1.2.0 for Spark and 0.98 for HBase. Spark does not need much configuration but HBase needs some parameters to be adjusted. Note that if you use an existing cluster you must replicate your configuration to all your nodes.</p>
+
+<p><a href="http://opencv.org/downloads.html">OpenCV 2.4.9</a> has been the tool chosen for the image processing tasks and should also be installed on all nodes in the cluster and be accessible.</p>
+
+<h2>
+<a id="how-it-works" class="anchor" href="#how-it-works" aria-hidden="true"><span class="octicon octicon-link"></span></a>How it works</h2>
+
+<p>This section tries to give a glance of how this implementation indexed images and retrieves potential replicas of input images. First of all, we detect the interest points on the images and build descriptors around it (feature vectors). To restrict the number of features per image we resize the image maintaining its ratio (the bigger the image the more features are detected) and we also can apply a filtering on their entropy or variance to discard the weakest ones. Also, for some descriptors, it is recommended to log scale their values to make their distribution more uniform.</p>
+
+<p>Each feature is sketched using a hashing function so each value from the descriptor vector is mapped into one bit. By doing this we reduce the dimensionality of the features and we embed them into a Hamming space. </p>
+
+<p>The binary sketch is divided into 'm' same size blocks and each one is put into a hash table using the block as a key. Two images match if they have at least one matching feature. Two features match when their Hamming distance is above a threshold 'h'. Candidate features that approximate the Hamming distance are those that match at least 'm' - 'h' blocks. </p>
+
+<p>From the list of candidates we discard those below the hamming threshold and we group the list of feature matches found by the image they belong to and assign a weight on them depending on the number of features that matched with the query image. We finally can apply another threshold to discard those results below a certain number of matches.</p>
+
+<h3>
+<a id="requirements" class="anchor" href="#requirements" aria-hidden="true"><span class="octicon octicon-link"></span></a>Requirements</h3>
+
+<ul>
+<li>OpenCV 2.4.9</li>
+<li>Spark 1.2.0 or above</li>
+<li>HBase 0.98</li>
+<li>Maven 3.0.4 or above</li>
+</ul>
+
+<h2>
+<a id="set-up" class="anchor" href="#set-up" aria-hidden="true"><span class="octicon octicon-link"></span></a>Set up</h2>
+
+<p>Download Spark and HBase. Once you have downloaded HBase you must modify the following files in the conf/hbase-site.xml:</p>
+
+<pre><code>    &lt;configuration&gt;
+      &lt;property&gt;
+        &lt;name&gt;hbase.rootdir&lt;/name&gt;
+        &lt;value&gt;file:///path/to/data&lt;/value&gt;
+      &lt;/property&gt;
+      &lt;property&gt;
+        &lt;name&gt;hbase.zookeeper.property.dataDir&lt;/name&gt;
+        &lt;value&gt;/path/to/zookeeper&lt;/value&gt;
+      &lt;/property&gt;
+    &lt;/configuration&gt;
+</code></pre>
+
+<p>The first property "base.rootdir" is the value of the path where hbase will install the data and "hbase.zookeeper.property.dataDir" is the folder related to the cluster manager. You do not need to create them,they will be created the first time you start the service.</p>
+
+<p>This settings are thought for a local distribution of HBase, where each process needed is spawned in the java JVM. Other approaches are possible: pseudo-distributed (where each component in the cluster uses an own daemon) and totally distributed. If you need to configure any of them please check HBase documentation.</p>
+
+<p>To disable annoying warnings and to ensure that Snappy compression works on HBase, you must point to both Hadoop and Snappy libraries. To do so, we recommend to copy or create a symbolic link to them in a folder (we used the hadoop/lib/native/ from our Hadoop folder) and make sure that 'libsnappy.so.1' and 'libhadoop.so.1.0.0' are acccessible from there. Set the path to these libraries as environment variables in your bashrc and also check that variable JAVA_HOME is set:</p>
+
+<pre><code>export JAVA_HOME=/path/to/jvm/java7
+export JAVA_LIBRARY_PATH=$JAVA_LIBRARY_PATH:/path/to/hadoop/lib/native
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/path/to/hadoop/lib/native
+</code></pre>
+
+<p>Then reload the shell by:</p>
+
+<pre><code>source ~/.bashrc
+</code></pre>
+
+<p>More information about this step can be found [here (<a href="http://hbase.apache.org/book.html#compression">http://hbase.apache.org/book.html#compression</a>).</p>
+
+<p>In case your are deploying in a cluster (even two separate clusters, one for HBase and one for Spark) you must repeat these operations in each of your nodes.</p>
+
+<p>In order to start HBase open a terminal, go to the installation folder and type:</p>
+
+<pre><code>$ ./bin/start-hbase.sh
+</code></pre>
+
+<h2>
+<a id="data" class="anchor" href="#data" aria-hidden="true"><span class="octicon octicon-link"></span></a>Data</h2>
+
+<p>For parameter tunning and testing we built a small dataset called UPCReplica dataset. It contains labeled data from replicas and background images using different simple image transformations such as rotation, Gaussian noise addition or occlusion. It can be found <a href="https://github.com/DaniUPC/UPCTwitter-social-data-set">here</a>.</p>
+
+<p>We will use this dataset for some of the examples described here.</p>
+
+<h2>
+<a id="compile-and-packaging" class="anchor" href="#compile-and-packaging" aria-hidden="true"><span class="octicon octicon-link"></span></a>Compile and packaging</h2>
+
+<p>We are going to compile and create the jar with maven. Check that it is installed. If not, install it through apt-get on Ubuntu:</p>
+
+<pre><code>$ sudo apt-get install maven
+</code></pre>
+
+<p>Download the code and go to the main folder. Execute:</p>
+
+<pre><code>$ mvn compile
+$ mvn package
+</code></pre>
+
+<p>It may require a bit and then you'll see a jar-with-dependencies inside the target folder. This is the jar that will be submitted into Spark.</p>
+
+<h2>
+<a id="executing-jobs-read-before-starting" class="anchor" href="#executing-jobs-read-before-starting" aria-hidden="true"><span class="octicon octicon-link"></span></a>Executing jobs (read before starting)</h2>
+
+<p>Some scripts have already been written to make easier to launch jobs. They contain the list of parameters needed to execute the task. Some of them are default parameters but a few must be defined for each specific execution environment (they have a header with the indication). The list of scripts can be found inside the folder 'script'. Though their names are descriptive enough they contain a short description as well as the description of their parameters.</p>
+
+<p>The parameters you should always set are:</p>
+
+<ul>
+<li>'OPENCV_PATH'. Points to the library folder of your OpenCV installation folder and must contain the *.so files.</li>
+<li>'SPARK_BIN'. Points to the 'bin' folder of the Spark installation directory.</li>
+<li>'SPARK_MASTER'. Points to the spark master node. If you are using a single machine set to 'local[n]' where n is , at most, the number of cores in your machine.</li>
+</ul>
+
+<p>If you want to use the disk version, set the following parameters in each of the tasks:</p>
+
+<ul>
+<li>'HBASE_MASTER': Path to the hbase master. Only needed for 'disk' persistence. On local set to '127.0.0.1'.</li>
+<li>'ZOOKEEPER_PORT': Zookeeper port. Only needed for 'disk' persistence. By default it must be 2181-</li>
+<li>'ZOOKEEPER_HOST': Zookeeper manager host. Only needed for 'disk' persistence. Set to '127.0.0.1' if executin on your local machine.</li>
+<li>'PERSISTENCE' must be set to 1 to enable HBase.</li>
+</ul>
+
+<p>Otherwise, if memory mode chosen, you must set the following parameter in all memory-based tasks:</p>
+
+<ul>
+<li>'MEM_FILE' points to the configuration file that stores the detector parameters.</li>
+<li>'PERSISTENCE' must be set to 1 to enable memory computation.</li>
+</ul>
+
+<h2>
+<a id="batch-processing" class="anchor" href="#batch-processing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Batch processing</h2>
+
+<h3>
+<a id="batch-use-cases-using-hbase" class="anchor" href="#batch-use-cases-using-hbase" aria-hidden="true"><span class="octicon octicon-link"></span></a>Batch use cases using HBase</h3>
+
+<p>This is the most mature version of the system and uses HBase as database to persist the indexed data and query against them. Let's start by indexing some images from a folder. Open a terminal, go to the main folder of the project and then execute:</p>
+
+<pre><code>$ ./scripts/initialize.sh
+</code></pre>
+
+<p>This command will flush all data and store the parameters of the replica detector in the database. These parameters can be modified in the script and values such as 'number of tables' or 'descriptor type' can be modified. Make sure you have set the parameters for the HBase configuration explained in the previous section.</p>
+
+<p>Then let's index some images from a folder. Execute:</p>
+
+<pre><code>$ ./scripts/index_folder.sh
+</code></pre>
+
+<p>And remember to set the parameter 'FOLDER' pointing to the folder with the images. Let's query a picture by executing:</p>
+
+<pre><code>% ./scripts/query_img.sh
+</code></pre>
+
+<p>Apart from all parameters related to HBase and Spark remember to provide the path to the image to query. It can be a local file or an URL. Spark console will output the replica results for the query (if any).</p>
+
+<h3>
+<a id="batch-use-cases-using-memory" class="anchor" href="#batch-use-cases-using-memory" aria-hidden="true"><span class="octicon octicon-link"></span></a>Batch use cases using memory</h3>
+
+<p>Memory-based implementation still does not have any mechanism to load data from external sources (e.g. HBase or Hadop File System) and indexed data on memory is flushed after the task ends. We prepared some tasks that embed both index and query in the same application. </p>
+
+<p>Let's choose two folders so one contains images to index (parameter 'FOLDER') and the other one images to query (parameter 'QUERY_FOLDER'). Execute:</p>
+
+<pre><code>$ ./scripts/index_query_folder.sh
+</code></pre>
+
+<p>Spark will output the results for the images in the console.</p>
+
+<h2>
+<a id="twitter-streaming-use-cases" class="anchor" href="#twitter-streaming-use-cases" aria-hidden="true"><span class="octicon octicon-link"></span></a>Twitter Streaming use cases</h2>
+
+<p>For this scenarios we need new parameters to be set in the scripts. We need to point to the twitter4j libraries:</p>
+
+<pre><code>TWITTER4J_CORE=lib/twitter4j-core-3.0.3.jar
+TWITTER4J_STREAMING=lib/twitter4j-stream-3.0.3.jar
+</code></pre>
+
+<p>This is already set and MUST NOT be modified. API Twitter keys must be provided in order to receive streams of tweets. You must register an account as Twitter Developer and create an application <a href="https://apps.twitter.com/">here</a>. When your keys are ready, you must override the following parameters in the scripts:</p>
+
+<pre><code>CONSUMER_KEY="insert_consumer_key" # Twitter consumer key 
+CONSUMER_SECRET="insert_consumer_secret" # Twitter consumer secret
+ACCESS_TOKEN="insert_access_token" # Twitter access token
+ACCESS_TOKEN_SECRET="insert_access_token_secret" # Twitter access token 
+</code></pre>
+
+<p>Streaming keeps the connection open and it is only stopped when an error occurs or when it is manually stopped. Before that, it constantly outputs data about the streams received.</p>
+
+<h3>
+<a id="streaming-images-using-hbase" class="anchor" href="#streaming-images-using-hbase" aria-hidden="true"><span class="octicon octicon-link"></span></a>Streaming images using HBase</h3>
+
+<p>For indexing images using Twitter Streaming API we must execute the following command, ensuring that we set the proper parameters that we have already commented throughout this tutorial:</p>
+
+<pre><code>$ ./scripts/index_streaming.sh
+</code></pre>
+
+<p>This command will start indexing images on those tweets containing picture resources. We can also query them by executing the script:</p>
+
+<pre><code>$ ./scripts/query_streaming.sh
+</code></pre>
+
+<p>Remember that HBase mode must have the 'PERSISTENCE' parameter to '1'.</p>
+
+<h3>
+<a id="streaming-images-on-memory" class="anchor" href="#streaming-images-on-memory" aria-hidden="true"><span class="octicon octicon-link"></span></a>Streaming images on memory</h3>
+
+<p>To test streaming on memory you must open a terminal and execute the following on the root folder of the project:</p>
+
+<pre><code>$ ./scripts/index_query.sh
+</code></pre>
+
+<p>This application submitted receives tweets, parses the images and queries them against the ones indexed. Aftwerads, they are stored so future tweets can queried against them. Remember that memory mode must have the 'PERSISTENCE' parameter to '0'.</p>
+
+<h3>
+<a id="evaluating-the-upcreplica-dataset" class="anchor" href="#evaluating-the-upcreplica-dataset" aria-hidden="true"><span class="octicon octicon-link"></span></a>Evaluating the UPCReplica dataset</h3>
+
+<p>If you want to see the impact of different configurations on the UPCReplica dataset you can use the 'evaluation.sh' task.</p>
+
+<p>Images from the UPCReplica dataset can be pointed using text files. In this example we will use the files uploaded in the repository, that contain:</p>
+
+<ul>
+<li>base.csv: Contains 13 images to index. Can be downloaded <a href="https://github.com/DaniUPC/near-image-replica-detection/blob/master/files/base.csv">here</a>
+</li>
+<li>query.csv: Contains 47 images: 32 replicas from one of the images to index and 15 background images. Download <a href="https://github.com/DaniUPC/near-image-replica-detection/blob/master/files/query.csv">here</a>.</li>
+</ul>
+
+<p>Download the test files and update the paths in the 'evaluation.sh' script:</p>
+
+<ul>
+<li>'DATASET_SRC_FILE': path where 'base.csv' is stored.</li>
+<li>'DATASET_QUERY_FILE': path where 'query.csv' is stored.</li>
+</ul>
+
+<p>Two more parameter need to be configured:</p>
+
+<ul>
+<li>'DATASET_PATH': Downloaded the <a href="https://github.com/DaniUPC/UPCTwitter-social-data-set">UPCReplica dataset</a> and write here the path to the 'dataset' subfolder.</li>
+<li>'DEST_FILE': Destination where to write the results.</li>
+</ul>
+
+<p>Now you can execute:</p>
+
+<pre><code>$ ./scripts/evaluation.sh
+</code></pre>
+
+<p>And collect your results.</p>
+
+<h3>
+<a id="comments-on-performance" class="anchor" href="#comments-on-performance" aria-hidden="true"><span class="octicon octicon-link"></span></a>Comments on performance</h3>
+
+<p>Executing on local machine starts to be slow after several thousands of indexed images. This is even more noticeable on the memory based implementation. Note that local execution must only be used for development and that the higher the number of tables in a experiment the longer it will take to both query and index.</p>
+
+<h3>
+<a id="spark-output" class="anchor" href="#spark-output" aria-hidden="true"><span class="octicon octicon-link"></span></a>Spark output</h3>
+
+<p>Spark output can be configured by creating a 'log4j.properties' in the 'conf' Spark directory. More information about log4j can be found <a href="http://www.mkyong.com/logging/log4j-log4j-properties-examples/">here</a>.</p>
+
+<h3>
+<a id="using-the-code" class="anchor" href="#using-the-code" aria-hidden="true"><span class="octicon octicon-link"></span></a>Using the code</h3>
+
+<p>If you want to use and extend the code from the detector (we will focus on Eclipse) note that you must create a user library for OpenCV as detailed <a href="http://docs.opencv.org/doc/tutorials/introduction/desktop_java/java_dev_intro.html">in this tutorial</a>.</p>
+
+<p>You will need 'Maven' and 'Git' plugins in Eclipse to import the project.</p>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/DaniUPC/near-image-replica-detection">Near-image-replica-detection</a> is maintained by <a href="https://github.com/DaniUPC">DaniUPC</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
+
