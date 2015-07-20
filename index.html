@@ -116,6 +116,13 @@ $ mvn package
 
 <p>It may require a bit and then you'll see a jar-with-dependencies inside the target folder. This is the jar that will be submitted into Spark.</p>
 
+<p>To make it work properly we must install OpenCV in the local maven repository or it will not compile. To do it, type the following replacing OPENCV_PATH by the route to your OpenCV folder installation.</p>
+
+<pre><code>$ mvn install:install-file -DgroupId=opencv -DartifactId=opencv -Dpackaging=jar -Dversion=2.4.9 -Dfile=/usr/local/opencv-2.4.9/opencv-249.jar
+</code></pre>
+
+<p>The instructions about how to install OpenCV in your machine are in <a href="http://docs.opencv.org/doc/tutorials/introduction/linux_install/linux_install.html">this link</a>.</p>
+
 <h2>
 <a id="executing-jobs-read-before-starting" class="anchor" href="#executing-jobs-read-before-starting" aria-hidden="true"><span class="octicon octicon-link"></span></a>Executing jobs (read before starting)</h2>
 
