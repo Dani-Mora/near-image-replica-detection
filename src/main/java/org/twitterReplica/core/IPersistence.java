@@ -35,6 +35,12 @@ public interface IPersistence {
 			IndexingParams iParams, FilteringParams fParams) throws DataException;
 	
 	/*
+	 * 	Flushes all data and initializes all structures needed
+	 */
+	public void restart(ReplicaConnection params, IndexingParams ind) throws DataException;
+	
+	
+	/*
 	 * 	Restarts the data stored
 	 */
 	public void restartData(ReplicaConnection params, IndexingParams ind) throws DataException;

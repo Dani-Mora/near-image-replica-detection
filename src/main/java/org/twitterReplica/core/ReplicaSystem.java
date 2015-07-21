@@ -79,7 +79,7 @@ public abstract class ReplicaSystem implements IDetector {
 		
 		try {
 			// Restart data
-			system.restartData(conn, indParams);
+			system.restart(conn, indParams);
 		} catch (DataException e) {
 			throw new InitializationException("Error reseting data: " + e.getMessage());
 		}

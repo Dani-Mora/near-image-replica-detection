@@ -41,6 +41,12 @@ public class DiskPersistenceSystem implements IPersistence {
 		Configuration conf = HBaseClient.getConfiguration(params);
 		HBaseClient.resetData(conf, ind);
 	}
+	
+	@Override
+	public void restart(ReplicaConnection params, IndexingParams ind) throws DataException {
+		Configuration conf = HBaseClient.getConfiguration(params);
+		HBaseClient.reset(conf, ind);
+	}
 
 	@Override
 	public void storeParameters(ReplicaConnection cParams, DescriptorParams dParams, IndexingParams iParams,

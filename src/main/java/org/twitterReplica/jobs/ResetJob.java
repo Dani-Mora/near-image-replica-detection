@@ -1,6 +1,5 @@
 package org.twitterReplica.jobs;
 
-import org.opencv.core.Core;
 import org.twitterReplica.core.DescriptorParams;
 import org.twitterReplica.core.FilteringParams;
 import org.twitterReplica.core.ReplicaConnection;
@@ -16,9 +15,6 @@ import org.twitterReplica.model.PersistenceMode;
 public class ResetJob {
 
 	public static void main(String[] args) {
-		
-		// Load OpenCV
-		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 		
 		// Read parameters
 		DescriptorParams descParams = null;

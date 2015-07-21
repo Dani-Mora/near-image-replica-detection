@@ -240,7 +240,12 @@ public class MemoryPersistenceSystem implements IPersistence {
 			images = null;
 			empty = true;
 		}
-		
+	}
+	
+	@Override
+	public void restart(ReplicaConnection params, IndexingParams ind)
+			throws DataException {
+		restartData(params, ind);
 	}
 	
 	/*
