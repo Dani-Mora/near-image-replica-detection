@@ -155,6 +155,11 @@ $ mvn package
 <h2>
 <a id="batch-processing" class="anchor" href="#batch-processing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Batch processing</h2>
 
+<p>Before starting, if you get the error message "Permission denied" when executing a script, it is due to the lack of permissions to execute it. You can solve it by typing:</p>
+
+<pre><code>$ chmod 777 name_of_script.sh
+</code></pre>
+
 <h3>
 <a id="batch-use-cases-using-hbase" class="anchor" href="#batch-use-cases-using-hbase" aria-hidden="true"><span class="octicon octicon-link"></span></a>Batch use cases using HBase</h3>
 
@@ -163,7 +168,7 @@ $ mvn package
 <pre><code>$ ./scripts/initialize.sh
 </code></pre>
 
-<p>This command will flush all data and store the parameters of the replica detector in the database. These parameters can be modified in the script and values such as 'number of tables' or 'descriptor type' can be modified. Make sure you have set the parameters for the HBase configuration explained in the previous section.</p>
+<p>This command will flush all data and store the parameters of the replica detector in the database. <strong>It is important that you execute the 'initialize.sh' script the first time you install the framework</strong> on your system when working with the HBase implementation to initialize all data structures. These parameters can be modified in the script and values such as 'number of tables' or 'descriptor type' can be modified. Make sure you have set the parameters for the HBase configuration explained in the previous section.</p>
 
 <p>Then let's index some images from a folder. Execute:</p>
 
