@@ -35,6 +35,7 @@ public class QueryFolderJob {
 		String hbaseMaster = args[4];
 		int port = Integer.valueOf(args[5]);
 		String zookeeperHost = args[6];
+		int minP = Integer.valueOf(args[7]);
 		
 		// Configure mode
 		ReplicaConnection conn = null;
@@ -57,7 +58,7 @@ public class QueryFolderJob {
 		
 		try {
 			long start = ReplicaUtils.getCPUTimeNow();
-			JavaPairRDD<ImageMatch, Long> matches = detector.queryFromFolder(spark, path, rank);
+			JavaPairRDD<ImageMatch, Long> matches = detector.queryFromFolder(spark, path, rank, minP);
 			List<Tuple2<ImageMatch, Long>> matchesArray = matches.collect();
 			long end = ReplicaUtils.getCPUTimeNow();
 			long dif = (long) ((end - start) / 1e9);

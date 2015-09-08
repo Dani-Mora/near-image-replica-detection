@@ -1,5 +1,6 @@
 package org.twitterReplica.jobs;
 
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.spark.api.java.JavaSparkContext;
@@ -62,6 +63,7 @@ public class EvaluationJob {
 		String hbaseMaster = args[19];
 		int port = Integer.valueOf(args[20]);
 		String zookeeperHost = args[21];
+		int minP = Integer.valueOf(args[22]);
 		
 		// Configure mode
 		ReplicaConnection conn = null;
@@ -86,12 +88,15 @@ public class EvaluationJob {
 			System.exit(1);
 		}
 		
+		selected = baseImgs + File.separatorChar + "query.csv";
+		baseImgs = baseImgs + File.separatorChar + "base.csv";
+		
 		// Index base images
 		long initLapse = -1;
 		try {
 			long start = ReplicaUtils.getCPUTimeNow();
 			BatchReplicaDetector det = (BatchReplicaDetector) detector;
-			det.indexFromDataset(spark, baseImgs, datasetSrc, true);
+			det.indexFromDataset(spark, baseImgs, datasetSrc, true, minP);
 			long end = ReplicaUtils.getCPUTimeNow();
 			initLapse = (long) ((end - start));
 		} catch (IndexingException e) {
@@ -106,7 +111,7 @@ public class EvaluationJob {
 		DatasetImgProvider provider = new DatasetImgProvider(datasetSrc, selected, ',');
 		// For every image received found queries and check results
 		final ReplicaEvaluator evaluator = new ReplicaEvaluator(detector, spark, destFolder, initLapse, 
-				descParams, filtParams, indParams, ranking);
+				descParams, filtParams, indParams, ranking, minP);
 		try {
 			evaluator.initialize();
 		} catch (IOException e) {

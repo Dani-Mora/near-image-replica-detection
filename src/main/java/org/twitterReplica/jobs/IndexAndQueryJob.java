@@ -1,9 +1,9 @@
 package org.twitterReplica.jobs;
 
-import java.io.File;
 import java.util.List;
 
 import org.apache.log4j.Logger;
+import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.opencv.core.Core;
@@ -15,7 +15,6 @@ import org.twitterReplica.exceptions.IndexingException;
 import org.twitterReplica.exceptions.InitializationException;
 import org.twitterReplica.exceptions.InvalidArgumentException;
 import org.twitterReplica.exceptions.QueryException;
-import org.twitterReplica.model.ImageInfo;
 import org.twitterReplica.model.ImageMatch;
 import org.twitterReplica.model.PersistenceMode;
 import org.twitterReplica.utils.ReplicaUtils;
@@ -34,7 +33,9 @@ public class IndexAndQueryJob {
 		// Load OpenCV
 		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
 
-		final JavaSparkContext spark = new JavaSparkContext();
+		final SparkConf config = new SparkConf();
+		config.set("spark.task.maxFailures", "4");
+		final JavaSparkContext spark = new JavaSparkContext(config);
 		
 		// Read parameters
 		DescriptorParams descParams = null;
@@ -62,6 +63,7 @@ public class IndexAndQueryJob {
 		String zookeeperHost = args[17];
 		String queryPath = args[18];
 		int rank = Integer.valueOf(args[19]);
+		int minP = Integer.valueOf(args[20]);
 		
 		// Configure mode
 		ReplicaConnection conn = null;
@@ -89,45 +91,37 @@ public class IndexAndQueryJob {
 		// Index base images
 		try {
 			BatchReplicaDetector det = (BatchReplicaDetector) detector;
-			det.indexFromFolder(spark, folder, false);
+			
+			long start, end, lapse;
+			
+			// Index images
+			start = ReplicaUtils.getCPUTimeNow();
+			det.indexFromFolder(spark, folder, false, minP);
+			end = ReplicaUtils.getCPUTimeNow();
+			lapse = (long) (end - start);
+			logger.warn("Indexing time: " + lapse + " nanoseconds");
+			
+			// Query folder
+			start = ReplicaUtils.getCPUTimeNow();
+			JavaPairRDD<ImageMatch, Long> matchesRDD = det.queryFromFolder(spark, queryPath, rank, minP);
+			List<Tuple2<ImageMatch, Long>> matchesArray = matchesRDD.toArray();
+			end = ReplicaUtils.getCPUTimeNow();
+			lapse = (long) (end - start);
+			logger.warn("Query time: " + lapse + " nanoseconds");
+
+			// Show matches
+			for (Tuple2<ImageMatch, Long> match : matchesArray) {
+				logger.warn(" --- Found image " + match._1.getQueryId() + " matching " + match._1.getMatchedId() + " with weight " + match._2);
+			}
+			
 		} catch (IndexingException e) {
-			System.out.println("Error indexing images: " + e.getMessage());
+			System.out.println("Error indexing folder: " + e.getMessage());
+			System.exit(1);
+		} catch (QueryException e) {
+			System.out.println("Error querying folder: " + e.getMessage());
 			System.exit(1);
 		}
-		
-		// Query folder
-		File queryFolder = new File(queryPath);
-		double total = 0.0;
-		double count = 0.0;
-		File[] files = queryFolder.listFiles();
-		
-		for (File f : files) {
-			
-			JavaPairRDD<ImageMatch, Long> matchesRDD;
-			try {
-				long start = ReplicaUtils.getCPUTimeNow();
-				matchesRDD = detector.queryImage(spark, new ImageInfo(f.getAbsolutePath()), rank);
-				List<Tuple2<ImageMatch, Long>> matchesArray = matchesRDD.toArray();
-				long end = ReplicaUtils.getCPUTimeNow();
-				long lapse = (long) ((end - start));
-				total += lapse;
-				
-				// Show matches
-				for (Tuple2<ImageMatch, Long> match : matchesArray) {
-					logger.warn(" --- Found match " + match._1.getMatchedId() + " with weight " + match._2);
-				}
-				
-				// Increase count 
-				count = count + 1;
-			} catch (QueryException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		
-		System.out.println("Count: " + count);
-		double average = total / count;
-		System.out.println("Average: " + average);
+	
 	}
-
+		
 }

@@ -39,9 +39,10 @@ OPENCV_PATH=/path/to/opencv/lib
 DATASET_PATH=/path/to/UPCReplica/dataset
 DATASET_SRC_FILE=/path/to/base.csv # An example of this file can be found in github
 SPARK_BIN=/path/to/spark/bin
+PARTITIONS=10 # Number of partitions to use
 
 #############################################################
 ########## Submition to Apache Spark ########################
 #############################################################
 
-$SPARK_BIN/spark-submit --class org.twitterReplica.jobs.IndexingJobReset --master $SPARK_MASTER --driver-library-path $OPENCV_PATH target/replica-0.0.1-SNAPSHOT-jar-with-dependencies.jar $DESCRIPTOR_TYPE $KEYPOINT_TYPE $SIDE $FEATURE_FILTERING $FEATURE_THRESH $LOG_SCALE $NUM_TABLES $W $HAMMING_THRESH $ENCODING $COMPRESSION $TTL $PERSISTENCE $DATASET_PATH $DATASET_SRC_FILE $MEM_FILE $HBASE_MASTER $ZOOKEEPER_PORT $ZOOKEEPER_HOST
+$SPARK_BIN/spark-submit --class org.twitterReplica.jobs.IndexingJobReset --master $SPARK_MASTER --driver-library-path $OPENCV_PATH target/replica-0.0.1-SNAPSHOT-jar-with-dependencies.jar $DESCRIPTOR_TYPE $KEYPOINT_TYPE $SIDE $FEATURE_FILTERING $FEATURE_THRESH $LOG_SCALE $NUM_TABLES $W $HAMMING_THRESH $ENCODING $COMPRESSION $TTL $PERSISTENCE $DATASET_PATH $DATASET_SRC_FILE $MEM_FILE $HBASE_MASTER $ZOOKEEPER_PORT $ZOOKEEPER_HOST $PARTITIONS

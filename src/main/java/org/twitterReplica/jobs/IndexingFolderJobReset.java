@@ -53,6 +53,7 @@ public class IndexingFolderJobReset {
 		String hbaseMaster = args[15];
 		int port = Integer.valueOf(args[16]);
 		String zookeeperHost = args[17];
+		int minP = Integer.valueOf(args[18]);
 		
 		// Configure mode
 		ReplicaConnection conn = null;
@@ -80,7 +81,7 @@ public class IndexingFolderJobReset {
 		// Index base images
 		try {
 			BatchReplicaDetector det = (BatchReplicaDetector) detector;
-			det.indexFromFolder(spark, folder, false);
+			det.indexFromFolder(spark, folder, false, minP);
 		} catch (IndexingException e) {
 			System.out.println("Error indexing images: " + e.getMessage());
 			System.exit(1);

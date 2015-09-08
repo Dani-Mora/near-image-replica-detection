@@ -60,7 +60,7 @@ public class BatchReplicaDetector extends ReplicaSystem implements IBatchDetecto
 	
 	@Override
 	public void indexFromDataset(JavaSparkContext spark, String selected,
-			String datasetPath, boolean reset) throws IndexingException {
+			String datasetPath, boolean reset, int minP) throws IndexingException {
 		
 		// if reset requested, restart all data
 		if (reset) {
@@ -72,13 +72,13 @@ public class BatchReplicaDetector extends ReplicaSystem implements IBatchDetecto
 		}
 		
 		// Read images list from the descriptor and compute features
-		JavaRDD<String> lines = spark.textFile(selected);
+		JavaRDD<String> lines = spark.textFile(selected, minP);
 		JavaRDD<ImageInfo> images = lines.map(new DescriptorDiskReader(datasetPath));
 		indexImages(images);
 	}
 
 	@Override
-	public void indexFromFolder(JavaSparkContext spark, String folder, boolean reset) 
+	public void indexFromFolder(JavaSparkContext spark, String folder, boolean reset, int minP) 
 			throws IndexingException {
 
 		if (!ReplicaUtils.folderExists(folder)) {
@@ -104,23 +104,24 @@ public class BatchReplicaDetector extends ReplicaSystem implements IBatchDetecto
 		});
 
 		// Parallelize, read image data and index
-		JavaRDD<String> names = spark.parallelize(Arrays.asList(files));
+		JavaRDD<String> names = spark.parallelize(Arrays.asList(files), minP);
 		JavaRDD<ImageInfo> imgs = names.map(new FolderReader(folder));
 		indexImages(imgs);
 	}
 	
 	@Override
 	public JavaPairRDD<ImageMatch, Long> queryFromDataset(JavaSparkContext spark, String selected, String datasetPath,
-			int rank) throws QueryException {
+			int rank, int minP) throws QueryException {
 		// Read images list from the descriptor and compute features
-		JavaRDD<String> lines = spark.textFile(selected);
+		JavaRDD<String> lines = spark.textFile(selected, minP);
 		JavaRDD<ImageInfo> images = lines.map(new DescriptorDiskReader(datasetPath));
 		return queryImages(images, rank);
 		
 	}
 
 	@Override
-	public JavaPairRDD<ImageMatch, Long> queryFromFolder(JavaSparkContext spark, String folder, int rank) throws QueryException {
+	public JavaPairRDD<ImageMatch, Long> queryFromFolder(JavaSparkContext spark, String folder, 
+			int rank, int minP) throws QueryException {
 		
 		if (!ReplicaUtils.folderExists(folder)) {
 			throw new QueryException("Input path '" + folder + "'is not a valid folder");
@@ -136,13 +137,14 @@ public class BatchReplicaDetector extends ReplicaSystem implements IBatchDetecto
 		});
 
 		// Parallelize, read image data and index
-		JavaRDD<String> names = spark.parallelize(Arrays.asList(files));
+		JavaRDD<String> names = spark.parallelize(Arrays.asList(files), minP);
 		JavaRDD<ImageInfo> imgs = names.map(new FolderReader(folder));
 		return queryImages(imgs, rank);
 	}
 	
 	@Override
-	public JavaPairRDD<ImageMatch, Long> queryImage(JavaSparkContext spark, ImageInfo imRes, int rank)
+	public JavaPairRDD<ImageMatch, Long> queryImage(JavaSparkContext spark, ImageInfo imRes, 
+			int rank, int minP)
 		throws QueryException {
 		
 		String path = imRes.getPath();
@@ -165,7 +167,7 @@ public class BatchReplicaDetector extends ReplicaSystem implements IBatchDetecto
 		Image imr = new Image(img, imRes.getPath(), imRes.getId(), String.valueOf(imRes.getId()), ProviderType.DISK);
 		imr.computeDescriptor(descParams);
 		JavaPairRDD<ImageInfo, ImageFeature> features = rddFromMatrix(spark, imRes, 
-				descParams, imr.getDescriptor());
+				descParams, imr.getDescriptor(), minP);
 		return queryImage(features, rank);
 	}
 	
@@ -281,16 +283,17 @@ public class BatchReplicaDetector extends ReplicaSystem implements IBatchDetecto
 	 * 	@param img Image object
 	 * 	@param params Descriptor computation parameters
 	 * 	@param desc Descriptor matrix
+	 * 	@param minP Minimum number of partitions
 	 * 	@return JavaRDD made of features extracted from the image
 	 */
 	protected static JavaPairRDD<ImageInfo, ImageFeature> rddFromMatrix(JavaSparkContext spark, ImageInfo img, 
-			DescriptorParams params, Mat desc) {
+			DescriptorParams params, Mat desc, int minP) {
 		List<Tuple2<ImageInfo, ImageFeature>> features = new ArrayList<Tuple2<ImageInfo, ImageFeature>>();
 		for (int i = 0; i < desc.size().height; ++i) {
 			features.add(new Tuple2<ImageInfo, ImageFeature>(img, 
 					new ImageFeature(img.getId(), ImageTools.matToArray(desc, i), params.getDescriptorType())));
 		}
-		return spark.parallelizePairs(features);
+		return spark.parallelizePairs(features, minP);
 	}
 
 }

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.spark.api.java.function.PairFlatMapFunction;
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.twitterReplica.core.DescriptorParams;
 import org.twitterReplica.improcessing.ImageTools;
@@ -38,6 +39,9 @@ public class ComputeFeatures implements PairFlatMapFunction<ImageInfo, ImageInfo
 	 */
 	public Iterable<Tuple2<ImageInfo, ImageFeature>> call(ImageInfo line) throws Exception {
 			
+		// Patch to make it work on BSC
+		System.loadLibrary( Core.NATIVE_LIBRARY_NAME );
+		
 		List<Tuple2<ImageInfo, ImageFeature>> features = new ArrayList<Tuple2<ImageInfo, ImageFeature>>();
 		
 		// Read image

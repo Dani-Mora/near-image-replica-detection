@@ -9,14 +9,18 @@ import org.twitterReplica.model.ImageMatch;
 
 public interface IBatchDetector {
 
+	// TODO: add also to streaming
+	
 	/*
 	 * 	Indexes data from the UPCReplica dataset
 	 * 	@param spark Spark Java Context
 	 * 	@param selected File containing rows of images to index
 	 * 	@param datasetPath UPCReplica dataset root folder
 	 * 	@param reset Whether to flush all data stored before indexing
+	 * 	@param minP Minimum number of partitions
 	 */
-	public void indexFromDataset(JavaSparkContext spark, String selected, String datasetPath, boolean reset) throws IndexingException;
+	public void indexFromDataset(JavaSparkContext spark, String selected, String datasetPath, 
+			boolean reset, int minP) throws IndexingException;
 	
 	/*
 	 * 	Indexes images from the input folder
@@ -25,8 +29,9 @@ public interface IBatchDetector {
 	 * 	@param spark Spark Java Context
 	 * 	@param folder Input folder where to extract images from
 	 * 	@param reset Whether to flush all data stored before indexing
+	 * 	@param minP Minimum number of partitions
 	 */
-	public void indexFromFolder(JavaSparkContext spark, String folder, boolean reset) throws IndexingException;
+	public void indexFromFolder(JavaSparkContext spark, String folder, boolean reset, int minP) throws IndexingException;
 	
 	/*
 	 * 	Queries and image and retrieves the matches and their weights
@@ -35,9 +40,10 @@ public interface IBatchDetector {
 	 * 	@param spark Spark Context
 	 * 	@param imRes Image to query
 	 * 	@param rank Feature filtering threhsold. Matches below this number of matches will be discarded
+	 * 	@param minP Minimum number of partitions
 	 * 	@return RDD containing the pairs of identifiers and weights of the image matched
 	 */
-	public JavaPairRDD<ImageMatch, Long> queryImage(JavaSparkContext spark, ImageInfo imRes, int rank) throws QueryException;
+	public JavaPairRDD<ImageMatch, Long> queryImage(JavaSparkContext spark, ImageInfo imRes, int rank, int minP) throws QueryException;
 	
 	/*
 	 * 	Queries images selected from the UPCReplica dataset
@@ -45,10 +51,11 @@ public interface IBatchDetector {
 	 * 	@param selected File containing rows of images to index
 	 * 	@param datasetPath UPCReplica dataset root folder
 	 * 	@param rank Feature filtering threhsold. Matches below this number of matches will be discarded
+	 * 	@param minP Minimum number of partitions
 	 * 	@return RDD containing the pairs of identifiers and weights of the image matched
 	 */
 	public JavaPairRDD<ImageMatch, Long> queryFromDataset(JavaSparkContext spark, String selected, String datasetPath, 
-			int rank) throws QueryException;
+			int rank, int minP) throws QueryException;
 	
 	/*
 	 * 	Queries images selected from the UPcReplica dataset
@@ -56,8 +63,9 @@ public interface IBatchDetector {
 	 * 	@param selected File containing rows of images to index
 	 * 	@param datasetPath UPCReplica dataset root folder
 	 * 	@param rank Feature filtering threhsold. Matches below this number of matches will be discarded
+	 *	@param minP Minimum number of partitions
 	 * 	@return RDD containing the pairs of identifiers and weights of the image matched
 	 */
-	public JavaPairRDD<ImageMatch, Long> queryFromFolder(JavaSparkContext spark, String folder, int rank) throws QueryException;
+	public JavaPairRDD<ImageMatch, Long> queryFromFolder(JavaSparkContext spark, String folder, int rank, int minP) throws QueryException;
 
 }

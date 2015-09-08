@@ -21,9 +21,10 @@ SPARK_MASTER=local[2] # Recommended to use as many executors as CPUs.
 MEM_FILE=/path/to/file.conf # Memory configuration file path. Only valid for 'memory' persistence mode. Set to null otherwise
 OPENCV_PATH=/path/to/opencv/lib
 SPARK_BIN=/path/to/spark/bin
+PARTITIONS=10 # Number of partitions to use
 
 #############################################################
 ########## Submition to Apache Spark ########################
 #############################################################
 
-$SPARK_BIN/spark-submit --class org.twitterReplica.jobs.QueryImageJob --master $SPARK_MASTER --driver-library-path $OPENCV_PATH target/replica-0.0.1-SNAPSHOT-jar-with-dependencies.jar $IMG $WEIGHT_FILT $PERSISTENCE $MEM_FILE $HBASE_MASTER $ZOOKEEPER_PORT $ZOOKEEPER_HOST
+$SPARK_BIN/spark-submit --class org.twitterReplica.jobs.QueryImageJob --master $SPARK_MASTER --driver-library-path $OPENCV_PATH target/replica-0.0.1-SNAPSHOT-jar-with-dependencies.jar $IMG $WEIGHT_FILT $PERSISTENCE $MEM_FILE $HBASE_MASTER $ZOOKEEPER_PORT $ZOOKEEPER_HOST $PARTITIONS

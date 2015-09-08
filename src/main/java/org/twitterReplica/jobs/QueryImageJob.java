@@ -34,6 +34,7 @@ public class QueryImageJob {
 		String hbaseMaster = args[4];
 		int port = Integer.valueOf(args[5]);
 		String zookeeperHost = args[6];
+		int minP = Integer.valueOf(args[7]);
 		
 		// Configure mode
 		ReplicaConnection conn = null;
@@ -59,7 +60,7 @@ public class QueryImageJob {
 		try {
 			
 			long start = ReplicaUtils.getCPUTimeNow();
-			matchesRDD = detector.queryImage(spark, new ImageInfo(path), rank);
+			matchesRDD = detector.queryImage(spark, new ImageInfo(path), rank, minP);
 			List<Tuple2<ImageMatch, Long>> matches = matchesRDD.collect();
 			long end = ReplicaUtils.getCPUTimeNow();
 			long dif = (end - start) / (long)(1e6);

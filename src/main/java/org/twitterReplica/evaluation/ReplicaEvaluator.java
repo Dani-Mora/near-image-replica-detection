@@ -58,6 +58,9 @@ public class ReplicaEvaluator implements ImageResourceListener {
 	private List<Long> truePositiveWeights;
 	private List<Long> falsePositiveWeights;
 	
+	// Minimum number of Spark partitions
+	private int minP;
+	
 	private ReplicaSystem detector;
 	
 	// CSV Header
@@ -83,9 +86,10 @@ public class ReplicaEvaluator implements ImageResourceListener {
 	 * 	@param descParams Descriptor computation parameters
 	 * 	@param filtParams Filtering parameters for features
 	 * 	@param indParams Indexing parameters
+	 * 	@param minP Minimum number of partitions
 	 */
 	public ReplicaEvaluator(ReplicaSystem system, JavaSparkContext spark, String statsFolder, long initLapse, 
-			DescriptorParams descParams, FilteringParams filtParams, IndexingParams indParams, int rankThresh) {
+			DescriptorParams descParams, FilteringParams filtParams, IndexingParams indParams, int rankThresh, int minP) {
 		this.detector = system;
 		this.spark = spark;
 		this.replicas = 0;
@@ -101,6 +105,7 @@ public class ReplicaEvaluator implements ImageResourceListener {
 		this.rankingThreshold = rankThresh;
 		this.truePositiveWeights = new ArrayList<Long>();
 		this.falsePositiveWeights = new ArrayList<Long>();
+		this.minP = minP;
 	}
 	
 	public void imageResReceived(ImageInfo r) {
@@ -110,7 +115,7 @@ public class ReplicaEvaluator implements ImageResourceListener {
 		try {
 			// Image received
 			long start = ReplicaUtils.getCPUTimeNow();
-			matches = det.queryImage(spark, r, this.rankingThreshold);
+			matches = det.queryImage(spark, r, this.rankingThreshold, this.minP);
 			List<Tuple2<ImageMatch, Long>> matchesArray = matches.toArray();
 			long end = ReplicaUtils.getCPUTimeNow();
 			long lapse = (long) (end - start);

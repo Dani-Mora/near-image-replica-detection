@@ -50,6 +50,7 @@ public class IndexingJobReset {
 		String hbaseMaster = args[16];
 		int port = Integer.valueOf(args[17]);
 		String zookeeperHost = args[18];
+		int minP = Integer.valueOf(args[19]);
 		
 		// Configure mode
 		ReplicaConnection conn = null;
@@ -76,7 +77,7 @@ public class IndexingJobReset {
 		
 		try {
 			BatchReplicaDetector det = (BatchReplicaDetector) detector;
-			det.indexFromDataset(spark, baseImgs, datasetSrc, false);
+			det.indexFromDataset(spark, baseImgs, datasetSrc, false, minP);
 		} catch (IndexingException e) {
 			System.out.println("Error indexing images: " + e.getMessage());
 			System.exit(1);

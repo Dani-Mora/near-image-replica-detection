@@ -30,6 +30,7 @@ public class IndexingJob {
 		String hbaseMaster = args[5];
 		int port = Integer.valueOf(args[6]);
 		String zookeeperHost = args[7];
+		int minP = Integer.valueOf(args[8]);
 		
 		// Configure mode
 		ReplicaConnection conn = null;
@@ -53,7 +54,7 @@ public class IndexingJob {
 		// Index base images
 		try {
 			BatchReplicaDetector det = (BatchReplicaDetector) detector;
-			det.indexFromDataset(spark, baseImgs, datasetSrc, reset);
+			det.indexFromDataset(spark, baseImgs, datasetSrc, reset, minP);
 		} catch (IndexingException e) {
 			System.out.println("Error indexing images: " + e.getMessage());
 			System.exit(1);
